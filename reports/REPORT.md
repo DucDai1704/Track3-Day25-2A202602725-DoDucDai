@@ -1,6 +1,6 @@
 # Lab 25B — Report
 
-**Họ tên / nhóm:** Đỗ Đức Đại (MSV: 2A202602725)  **Commit:** a3f9ce7078c14d183ed1e95d311a2df59bc86855  **Điểm tự động (`make grade`):** 84.0 / 88 (Chưa tính 4đ dữ liệu ẩn của giảng viên)
+**Họ tên / nhóm:** Đỗ Đức Đại (MSV: 2A202602725)  **Commit:** d28f1b333439cea4fd234e32a4baa420b5e3e509  **Điểm tự động (`make grade`):** 84.0 / 88 (Chưa tính 4đ dữ liệu ẩn của giảng viên)
 
 > Mọi nhận định phải có số. Dán số từ `reports/gameday/*.json`, `reports/workflows.json`, `reports/slo.json`.
 
