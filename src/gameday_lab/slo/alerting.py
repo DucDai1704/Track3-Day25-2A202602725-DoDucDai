@@ -49,13 +49,21 @@ class WindowSums:
     """
 
     def __init__(self, values: list[int]) -> None:
-        """TODO(student): build the prefix-sum list (prefix[0] = 0)."""
-        raise NotImplementedError("TODO(student): WindowSums.__init__()")
+        """Build the prefix-sum list (prefix[0] = 0)."""
+        self.prefix = [0] * (len(values) + 1)
+        for i, v in enumerate(values):
+            self.prefix[i + 1] = self.prefix[i] + v
 
     def sum(self, end_inclusive: int, length: int) -> int:
-        """TODO(student): sum of values[end_inclusive - length + 1 .. end_inclusive],
+        """Sum of values[end_inclusive - length + 1 .. end_inclusive],
         clipped at index 0 when the window starts before the data."""
-        raise NotImplementedError("TODO(student): WindowSums.sum()")
+        if end_inclusive < 0:
+            return 0
+        end = min(len(self.prefix) - 1, end_inclusive + 1)
+        start = max(0, end_inclusive - length + 1)
+        if start >= end:
+            return 0
+        return self.prefix[end] - self.prefix[start]
 
 
 class BurnRateAlerter:
@@ -66,30 +74,62 @@ class BurnRateAlerter:
         self.rules = rules
 
     def burn_rate(self, total: WindowSums, bad: WindowSums, end: int, length: int) -> float:
-        """TODO(student): (bad / total over the window) / (1 - slo); 0.0 if total is 0."""
-        raise NotImplementedError("TODO(student): burn_rate()")
+        """(bad / total over the window) / (1 - slo); 0.0 if total is 0."""
+        tot = total.sum(end, length)
+        if tot == 0:
+            return 0.0
+        b = bad.sum(end, length)
+        return (b / tot) / (1.0 - self.slo)
 
     def evaluate(self, total: list[int], bad: list[int]) -> list[AlertEvent]:
-        """TODO(student): one AlertEvent per contiguous firing episode of each rule.
+        """One AlertEvent per contiguous firing episode of each rule.
 
         For each rule, scan the minutes; the rule fires at minute i when
         burn(long) >= rule.burn_rate AND burn(short) >= rule.burn_rate.
         An episode starts at the first firing minute and ends (exclusive) at the
         first minute it stops firing (or len(total)). Sort by start_min.
         """
-        raise NotImplementedError("TODO(student): evaluate()")
+        n = len(total)
+        tot_ws = WindowSums(total)
+        bad_ws = WindowSums(bad)
+        events: list[AlertEvent] = []
+
+        for rule in self.rules:
+            in_episode = False
+            ep_start = 0
+            for i in range(n):
+                br_long = self.burn_rate(tot_ws, bad_ws, i, rule.long_min)
+                br_short = self.burn_rate(tot_ws, bad_ws, i, rule.short_min)
+                fires = (br_long >= rule.burn_rate - 1e-9) and (br_short >= rule.burn_rate - 1e-9)
+                if fires and not in_episode:
+                    in_episode = True
+                    ep_start = i
+                elif not fires and in_episode:
+                    events.append(AlertEvent(rule.name, rule.severity, ep_start, i))
+                    in_episode = False
+            if in_episode:
+                events.append(AlertEvent(rule.name, rule.severity, ep_start, n))
+
+        events.sort(key=lambda e: (e.start_min, e.end_min, e.rule))
+        return events
 
 
 def error_budget_report(total: list[int], bad: list[int], slo: float = 0.995) -> dict[str, float | bool]:
-    """TODO(student): how much of the 30-day error budget is spent?
+    """How much of the 30-day error budget is spent?"""
+    reqs = sum(total)
+    allowed_bad = round((1.0 - slo) * reqs, 1)
+    bad_sum = sum(bad)
+    avail = round(1.0 - (bad_sum / reqs) if reqs > 0 else 1.0, 6)
+    budget_consumed = round(bad_sum / allowed_bad if allowed_bad > 0 else 0.0, 4)
+    budget_remaining = round(1.0 - budget_consumed, 4)
+    freeze = budget_remaining <= 0.0
+    return {
+        "requests": reqs,
+        "allowed_bad": allowed_bad,
+        "bad": bad_sum,
+        "availability": avail,
+        "budget_consumed": budget_consumed,
+        "budget_remaining": budget_remaining,
+        "freeze_releases": freeze,
+    }
 
-    Return a dict with:
-      requests          sum(total)
-      allowed_bad       (1 - slo) * requests            (round to 1 decimal)
-      bad               sum(bad)
-      availability      1 - bad / requests              (round to 6 decimals)
-      budget_consumed   bad / allowed_bad               (round to 4 decimals)
-      budget_remaining  1 - budget_consumed             (round to 4 decimals)
-      freeze_releases   True when nothing is left (budget_remaining <= 0)
-    """
-    raise NotImplementedError("TODO(student): error_budget_report()")
